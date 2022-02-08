@@ -12,7 +12,7 @@ on:
 jobs:
   build_release:
     name: "Default release build"
-    if: ${{ github.repository == 'dlang/installer' }}
+    # if: ${{ github.repository == 'dlang/installer' }}
     uses: ./.github/workflows/build_release_template.yml
     with:
       # Test master for now, could also be safe with stable

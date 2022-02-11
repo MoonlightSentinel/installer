@@ -107,3 +107,4 @@ jobs:
           [ "$DMD_REF" != "" ]
           [ "$DRUNTIME_REF" != "" ]
           [ "$PHOBOS_REF" != "" ]
+          echo Hello

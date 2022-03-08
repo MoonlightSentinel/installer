@@ -22,10 +22,11 @@ jobs:
       installer_repo:
       installer_branch:
 
+      build_windows_installer: true
+
   validate_build:
     name: Validate results of build_release_template.yml
     needs: build_release
-    if: false
 
     strategy:
       fail-fast: false
@@ -76,6 +77,18 @@ jobs:
         if: ${{ matrix.target.os != 'freebsd' }}
         shell: bash
         run: source ./installer/test/release/validate_release.sh
+
+      - name: Execute the windows installer
+        if: ${{ matrix.target.os == 'windows' }}
+        shell: pwsh
+        run: |
+          # Suppress elevated permissions prompt
+          Set-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\policies\system" -Name EnableLUA -Value 0
+
+          # Install the freshly built dmd
+          dir
+          $INSTALLER = (Get-Childitem -name dmd*.exe)
+          Wait-Process -id (Start-Process $INSTALLER -ArgumentList "/S" -PassThru).id
 
       - name: Check ${{ matrix.target.os }} artifacts in a VM
         if: ${{ matrix.target.os == 'freebsd' }}

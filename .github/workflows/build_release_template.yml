@@ -30,6 +30,11 @@ on:
         default: 'master'
         description: Branch providing the build scripts
 
+      build_windows_installer:
+        type: boolean
+        default: false
+        description: Build and include an installer for Windows
+
     # Expose the commit hash of the built revisions for dmd / druntime / phobos
     # (useful for error reporting / logs / ...)
     outputs:
@@ -315,6 +320,61 @@ jobs:
             cd create_dmd_release
             $LDC_BIN/ldmd2 -g -m64 --link-defaultlib-debug -version=NoVagrant -i build_all.d $EXTRA_FLAGS
             ./build_all --targets=${{ matrix.target }} "v$LDC" ${{ inputs.release_branch }}
+
+      #################################################################
+      # Build for the current target using build_all.d from installer
+      #
+      - name: Dump
+        shell: bash
+        run: ls -aulR
+
+      - name: Build installer for Windows
+        if: matrix.target == 'windows' && inputs.build_windows_installer == true
+        shell: bash
+        run: |
+          set -eux
+
+          mkdir installer_dependencies
+          cd installer_dependencies
+
+          # WORKAROUND: Install older NSIS version that still works with EnvVarUpdate.nsh
+          echo "::group::Install older makensis"
+
+          CURL="curl -L -O --retry 4"
+          $CURL https://sourceforge.net/projects/nsis/files/NSIS%203/3.04/nsis-3.04-setup.exe
+          pwsh -c '&{ Set-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\policies\system" -Name EnableLUA -Value 0 ; Wait-Process -id (Start-Process .\nsis-3.04-setup.exe -ArgumentList "/S" -PassThru).id }'
+
+          # The installer script requires several extensions, see windows/readme.txt
+          echo "::group::Install makensis plugins"
+
+          $CURL https://nsis.sourceforge.io/mediawiki/images/1/1c/Nsisunz.zip
+          $CURL https://nsis.sourceforge.io/mediawiki/images/a/ad/EnvVarUpdate.7z
+          $CURL https://nsis.sourceforge.io/mediawiki/images/c/c9/Inetc.zip
+
+          # Extract only the required plugin dll's / scripts, discard the rest
+          7z x EnvVarUpdate.7z
+          unzip Nsisunz.zip
+          unzip Inetc.zip
+
+          TARGET='/c/Program Files (x86)/NSIS/Plugins/'
+          cp -r ./Plugins/* "$TARGET"
+          cp -r EnvVarUpdate.nsh ../windows/
+
+          cd ..
+          rm -r installer_dependencies
+
+          echo "::group::Build installer"
+
+          7z x create_dmd_release/build/dmd.${{ inputs.release_branch }}.windows.zip -odmd.${{ inputs.release_branch }}.windows
+          VER=$(cat "dmd.${{ inputs.release_branch }}.windows/dmd2/src/version")
+
+          cd windows
+          makensis -version
+          makensis -DVersion2="$VER" -DEmbedD2Dir='..\dmd.${{ inputs.release_branch }}.windows\dmd2' d2-installer.nsi
+
+          # TODO: Sign the installer
+
+          mv dmd-*.exe "${{ github.workspace }}/create_dmd_release/build/"
 
       #################################################################
       # Save the target-specific release as a artifact s.t. the next

@@ -210,7 +210,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ github.workspace }}/create_dmd_release/build
-          key: 'windows-release-build-ws2'
+          key: 'windows-release-build-ws3'
 
       #################################################################
       # Install latest LDC used to compile the release scripts and to

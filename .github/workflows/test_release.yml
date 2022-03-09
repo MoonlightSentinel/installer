@@ -10,13 +10,30 @@ on:
       - master
 
 jobs:
+  parameters:
+    name: "Determine test parameters"
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.main.outputs.tag }}
+
+    steps:
+      - name: Determine release tag to build
+        id: main
+        run: |
+          set -eux
+
+          curl -L -O --retry 5 http://downloads.dlang.org/releases/LATEST
+          VER="$(cat LATEST)"
+          echo "::set-output name=tag::v$VER"
+
+
   build_release:
     name: "Default release build"
+    needs: parameters
     # if: ${{ github.repository == 'dlang/installer' }}
     uses: ./.github/workflows/build_release_template.yml
     with:
-      # Test master for now, could also be safe with stable
-      release_branch: master
+      release_branch: ${{ needs.parameters.outputs.tag }}
 
       # Empty = use the repository/branch that triggered the build
       installer_repo:

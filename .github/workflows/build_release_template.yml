@@ -186,6 +186,7 @@ jobs:
               libxml2 \
               make \
               p7zip-full \
+              pass \
               rpm \
               rsync \
               unzip \

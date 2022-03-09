@@ -236,7 +236,7 @@ string runCapture(string cmd)
 {
     writeln("\033[36m", cmd, "\033[0m");
     auto result = executeShell(cmd);
-    enforce(result.status == 0);
+    enforce(result.status == 0, format("\"%s\" failed with exit code %s\n%s", cmd, result.status, result.output));
     return result.output.strip;
 }
 
